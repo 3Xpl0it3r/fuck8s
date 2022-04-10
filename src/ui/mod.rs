@@ -60,6 +60,7 @@ pub async fn start_ui(app: Arc<tokio::sync::Mutex<App<'_>>>) -> Result<()> {
     loop {
         let mut app = app.lock().await;
         // 初始化数据
+        app.initialized().await;
 
         // check windows size is ok 
 

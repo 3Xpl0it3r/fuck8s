@@ -10,13 +10,11 @@ use k8s_openapi::api::core::v1::{
 use eyre::Result;
 use tui::widgets::ListState;
 use tokio::sync::mpsc::Receiver;
-use k8s_openapi::Resource;
 use log::{warn};
 use std::any::Any;
 use futures::{FutureExt, StreamExt};
 
-use crate::storage::MemoryShareStorage;
-
+use crate::storage::{MemoryShareStorage, KubeNodeStatus, Resource};
 
 pub enum InputMode {
     Normal,
@@ -39,8 +37,10 @@ pub struct App<'a> {
 
     // kubernetes
     pub pod_buffer: Vec<Pod>,
+    pub pod_total_running: i32,
 
     // 面版属性 dashabord
+    pub node_list: Vec<KubeNodeStatus>,
 }
 
 impl<'a> App<'a> {
@@ -48,16 +48,16 @@ impl<'a> App<'a> {
         App {
             title: APP_TITLE,
             should_quit: false,
-            tabs: TabsState::new(vec!["概况", "工作负载", "网络", "神秘功能"]),
+            tabs: TabsState::new(vec!["概况", "工作负载", "网络"]),
             enhanced_graphics: false,
             input_mode: InputMode::Normal,
             input_buffer: String::new(),
             pod_buffer: Vec::new(),
-
+            node_list: Vec::<KubeNodeStatus>::new(),
             storage:db,
+            pod_total_running: 1,
         }
     }
-
 
     pub fn on_up(&mut self) {
         self.tabs.previous()
@@ -87,8 +87,16 @@ impl<'a> App<'a> {
     pub fn on_tick(&mut self) {
         //
     }
-}
 
+    // 初始化数据
+    pub async fn initialized(&mut self) {
+        self.node_list.clear();
+        let node_storage = self.storage[2].lock().await;
+        for (_, Resource::KubeNode(node)) in node_storage.iter(){
+            self.node_list.push(node.clone())
+        }
+    }
+}
 
 
 pub struct TabsState<'a> {
@@ -117,6 +125,7 @@ pub struct StatefulList<T> {
     pub state: ListState,
     pub items: Vec<T>,
 }
+
 
 impl<T> StatefulList<T> {
     pub fn with_items(items: Vec<T>) -> StatefulList<T> {

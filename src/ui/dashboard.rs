@@ -96,10 +96,10 @@ where
         .constraints([Constraint::Percentage(25), Constraint::Percentage(25), Constraint::Percentage(25),Constraint::Percentage(25)].as_ref())
         .split(wrapper_chunk[0]);
 
-    let pod = widget_charts("Pod Usage");
-    let cpu = widget_charts("Cpu Usage");
-    let mem = widget_charts("Mem Usage");
-    let disk = widget_charts("Disk Usage");
+    let pod = widget_charts("Pod Usage", 10);
+    let cpu = widget_charts("Cpu Usage", 20);
+    let mem = widget_charts("Mem Usage", 10);
+    let disk = widget_charts("Disk Usage", 13);
 
     //
     f.render_widget(pod, cluster_chunks[0]);
@@ -110,7 +110,7 @@ where
     // table
     // draw_logo_widget(f, wrapper_chunk[1]);
 
-    let node_detail_tabls = widget_table();
+    let node_detail_tabls = widget_table(app);
     f.render_widget(node_detail_tabls, wrapper_chunk[1]);
 
 }
@@ -127,7 +127,6 @@ fn draw_search<B>(f: &mut Frame<B>, app: &mut App, ares: Rect)
     let search = Paragraph::new(text)
         .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).style(Style::default()));
 
-
     let input = Paragraph::new(app.input_buffer.as_ref())
         .style(match app.input_mode{
             InputMode::Normal => Style::default(),
@@ -140,7 +139,7 @@ fn draw_search<B>(f: &mut Frame<B>, app: &mut App, ares: Rect)
     f.set_cursor(ares.x + 20, ares.y + 1);
 }
 
-fn widget_charts<'a>(title: &'a str)->Chart<'a>{
+fn widget_charts<'a>(title: &'a str, value : i32)->Chart<'a>{
     let datasets = vec![Dataset::default()
         .name("data")
         .marker(symbols::Marker::Braille)
@@ -160,7 +159,7 @@ fn widget_charts<'a>(title: &'a str)->Chart<'a>{
             Axis::default()
                 .title("date/time")
                 .style(Style::default().fg(Color::Gray))
-                .bounds([0.0, 50.0])
+                .bounds([0.0, value.into()])
                 .labels(vec![
                     Span::styled("0", Style::default().add_modifier(Modifier::BOLD)),
                     Span::raw("25"),
@@ -181,11 +180,15 @@ fn widget_charts<'a>(title: &'a str)->Chart<'a>{
     chart
 }
 
-fn widget_table<'a>()->Table<'a> {
-    let mock_data = vec![
-        vec!["minikube", "control-plane,master", "4", "8151352Ki", "61255492Ki", "192.168.49.2", "Ubuntu 20.04.2 LTS", "Ready"],
-    ];
-    let header_cells = ["Node", "Role", "Cpu", "Mem", "Disk", "ExternalIp", "Os", "Status"].iter()
+fn widget_table<'a>(app: &App)->Table<'a> {
+    let mut data_rows = vec![];
+
+    for item in app.node_list.iter(){
+        data_rows.push(Row::new(vec![item.node_name.clone(), item.capacity_cpu.clone(), item.capacity_mem.clone(), item.capacity_disk.clone(),
+        item.external_ip.clone(), item.os_image.clone(), item.architecture.clone()]))
+    }
+
+    let header_cells = ["Node", "Cpu", "Mem", "Disk", "ExternalIp", "Os", "architecture"].iter()
         .map(|h| Cell::from(*h).style(Style::default().fg(Color::Gray)));
 
     let header = Row::new(header_cells)
@@ -193,30 +196,20 @@ fn widget_table<'a>()->Table<'a> {
         .height(1)
         .bottom_margin(1);
 
-    let rows = mock_data.iter().map(|item| {
-        let height = item
-            .iter()
-            .map(|content| content.chars().filter(|c| *c == '\n').count())
-            .max()
-            .unwrap_or(0)
-            + 1;
-        let cells = item.iter().map(|c| Cell::from(*c));
-        Row::new(cells).height(height as u16).bottom_margin(1)
-    });
 
-    Table::new(rows)
+
+    Table::new(data_rows)
         .header(header)
         .block(Block::default().borders(Borders::ALL).border_style(Style::default()).title("节点🔎"))
         .highlight_style(Style::default())
         .widths(&[
             Constraint::Min(10),        // node
-            Constraint::Min(20),        // role
-            Constraint::Min(3),        // cpu
-            Constraint::Min(10),        // mem
+            Constraint::Min(4),        // cpu
+            Constraint::Min(10),        // cpu
+            Constraint::Min(10),        // disk
             Constraint::Min(10),        // disk
             Constraint::Min(20),        // ip
             Constraint::Min(20),        // os
-            Constraint::Min(5),        // status
         ])
 
 }
