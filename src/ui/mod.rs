@@ -3,6 +3,7 @@ mod dashboard;
 mod network;
 mod workload;
 mod util;
+mod banner;
 
 use std::{ sync::Arc, io, };
 
@@ -46,6 +47,11 @@ use self::{
 use crate::ui::util::draw_log_widget;
 
 pub async fn start_ui(app: Arc<tokio::sync::Mutex<App<'_>>>) -> Result<()> {
+    // 第一次检查下，k8s 链接异常直接退出，不初始化gui 界面，否则会造成terminal混乱
+    {
+        let mut once_app = app.lock().await;
+        once_app.initialized();
+    }
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
