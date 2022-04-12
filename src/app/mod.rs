@@ -1,3 +1,5 @@
+pub mod state_machine;
+
 use rand::{
     distributions::{Distribution, Uniform},
     rngs::ThreadRng,
@@ -15,10 +17,16 @@ use std::any::Any;
 use futures::{FutureExt, StreamExt};
 
 use crate::storage::{MemoryShareStorage, KubeNodeStatus, Resource};
+use state_machine::StateMachine;
+
 
 pub enum InputMode {
     Normal,
     Editing,
+}
+
+pub enum ActiveBlock{
+    HomeIndex, //首页
 }
 
 const APP_TITLE: &str = "fuck8s";
@@ -26,7 +34,7 @@ const APP_TITLE: &str = "fuck8s";
 pub struct App<'a> {
     pub title: &'static str,
     pub should_quit: bool,
-    pub tabs: TabsState<'a>,
+    pub menu_tabs: MenuTabsState<'a>,
     // channel
 
     pub storage: MemoryShareStorage,
@@ -39,6 +47,9 @@ pub struct App<'a> {
     pub pod_buffer: Vec<Pod>,
     pub pod_total_running: i32,
 
+    // Statement Machine
+    pub active_block: StateMachine,
+
     // 面版属性 dashabord
     pub node_list: Vec<KubeNodeStatus>,
 }
@@ -48,7 +59,7 @@ impl<'a> App<'a> {
         App {
             title: APP_TITLE,
             should_quit: false,
-            tabs: TabsState::new(vec!["概况", "工作负载", "网络"]),
+            menu_tabs: MenuTabsState::new(vec!["概况", "工作负载", "网络"]),
             enhanced_graphics: false,
             input_mode: InputMode::Normal,
             input_buffer: String::new(),
@@ -56,31 +67,9 @@ impl<'a> App<'a> {
             node_list: Vec::<KubeNodeStatus>::new(),
             storage:db,
             pod_total_running: 1,
-        }
-    }
 
-    pub fn on_up(&mut self) {
-        self.tabs.previous()
-    }
+            active_block: StateMachine::Empty,
 
-    pub fn on_down(&mut self) {
-        self.tabs.next()
-    }
-
-    pub fn on_right(&mut self) {
-        self.tabs.previous()
-    }
-
-    pub fn on_left(&mut self) {
-        self.tabs.next()
-    }
-
-    pub fn on_key(&mut self, c: char) {
-        match c {
-            'q' => {
-                self.should_quit = true;
-            },
-            _ => {}
         }
     }
 
@@ -99,69 +88,42 @@ impl<'a> App<'a> {
 }
 
 
-pub struct TabsState<'a> {
+pub struct MenuTabsState<'a> {
     pub titles: Vec<&'a str>,
     pub index: usize,
 }
 
-impl<'a> TabsState<'a> {
-    pub fn new(titles: Vec<&'a str>) -> TabsState {
-        TabsState { titles, index: 0 }
+impl<'a> MenuTabsState<'a> {
+    pub fn new(titles: Vec<&'a str>) -> MenuTabsState {
+        MenuTabsState { titles, index: 0 }
     }
-    pub fn next(&mut self) {
+    fn next(&mut self) {
         self.index = (self.index + 1) % self.titles.len();
     }
 
-    pub fn previous(&mut self) {
+    fn previous(&mut self) {
         if self.index > 0 {
             self.index -= 1;
         } else {
             self.index = self.titles.len() - 1;
         }
     }
-}
 
-pub struct StatefulList<T> {
-    pub state: ListState,
-    pub items: Vec<T>,
-}
-
-
-impl<T> StatefulList<T> {
-    pub fn with_items(items: Vec<T>) -> StatefulList<T> {
-        StatefulList {
-            state: ListState::default(),
-            items,
-        }
+    pub fn on_up(&mut self) {
+        self.previous()
     }
 
-    pub fn next(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
+    pub fn on_down(&mut self) {
+        self.next()
     }
 
-    pub fn previous(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
+    pub fn on_right(&mut self) {
+        self.previous()
     }
 
-    // 总共有多少个节点
+    pub fn on_left(&mut self) {
+        self.next()
+    }
+
+
 }

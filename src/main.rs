@@ -36,8 +36,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let app = Arc::new(tokio::sync::Mutex::new(App::new(db.clone())));
     let manager = Manager::new(db).await;
+    {
+        let _ = &manager.check_connection().await;
+    }
 
-
+    //
+    //
     tokio::select! {
         _ = ui::start_ui(app) => {},
         _ =  manager.run() => {}

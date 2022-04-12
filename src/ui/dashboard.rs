@@ -16,10 +16,11 @@ use tui::{
     symbols,
 };
 // use private library
-use crate::app::{self, App, StatefulList, InputMode};
+use crate::app::{self, App, MenuTabsState, InputMode};
 
-use super::util::{draw_log_widget, draw_help_widget, draw_logo_widget};
+use super::util::{draw_log_widget, draw_help_widget};
 use tui::widgets::GraphType;
+use crate::app::state_machine;
 
 const DATA2: [(f64, f64); 7] = [
     (0.0, 0.0),
@@ -47,6 +48,7 @@ pub fn draw<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
     where
         B: Backend,
 {
+    app.active_block = state_machine::StateMachine::HomeBlock;
     let out_block = Block::default().borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .style(Style::default());
@@ -108,7 +110,6 @@ where
     f.render_widget(disk, cluster_chunks[3]);
     // 每个节点单独的状态
     // table
-    // draw_logo_widget(f, wrapper_chunk[1]);
 
     let node_detail_tabls = widget_table(app);
     f.render_widget(node_detail_tabls, wrapper_chunk[1]);
@@ -179,6 +180,8 @@ fn widget_charts<'a>(title: &'a str, value : i32)->Chart<'a>{
         );
     chart
 }
+
+
 
 fn widget_table<'a>(app: &App)->Table<'a> {
     let mut data_rows = vec![];

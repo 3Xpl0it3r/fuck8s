@@ -20,7 +20,7 @@ use tui::{
     layout::{Layout, Constraint, Alignment},
     text ::{Spans, Span},
     widgets::{Tabs, Block, Borders, Paragraph},
-    style::{Style, Color},
+
 };
 use tokio::{time::{sleep, Duration}};
 
@@ -35,7 +35,6 @@ use crate::{
     app::App, 
     event::{Events, Key, Event, EventConfig},
 };
-use self::util::draw_logo_widget;
 use crate::handler::handler_app;
 
 
@@ -45,13 +44,10 @@ use self::{
     workload::draw as draw_workload,
 };
 use crate::ui::util::draw_log_widget;
+use tui::style::{Style, Color};
 
 pub async fn start_ui(app: Arc<tokio::sync::Mutex<App<'_>>>) -> Result<()> {
-    // 第一次检查下，k8s 链接异常直接退出，不初始化gui 界面，否则会造成terminal混乱
-    {
-        let mut once_app = app.lock().await;
-        once_app.initialized();
-    }
+
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -107,7 +103,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         .split(f.size());
     // mem tables
     let titles = app
-        .tabs
+        .menu_tabs
         .titles
         .iter()
         .map(|t| Spans::from(Span::styled(*t, Style::default().fg(Color::Green))))
@@ -115,7 +111,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let tabs = Tabs::new(titles)
         .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title(app.title).title_alignment(Alignment::Center))
         .highlight_style(Style::default().fg(Color::Yellow))
-        .select(app.tabs.index);
+        .select(app.menu_tabs.index);
     f.render_widget(tabs, chunks[0]);
 
 
@@ -123,7 +119,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     f.render_widget(boader, chunks[1]);
 
 
-    match app.tabs.index {
+    match app.menu_tabs.index {
         0 => draw_dashboard(f, app, chunks[1]),      // dashboard monitor
         1 => draw_workload(f, app, chunks[1]),
         2 => draw_network(f, app, chunks[1]),

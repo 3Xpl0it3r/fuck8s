@@ -1,5 +1,5 @@
 
-use crate::app::App;
+use crate::app::{App, state_machine};
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect, Alignment},
@@ -13,11 +13,14 @@ use tui::{
     },
     Frame,
 };
+use super::util::draw_log_widget;
 
 pub fn draw<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
     where
         B: Backend,
 {
+    app.active_block = state_machine::StateMachine::NetworkBlock;
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
@@ -29,5 +32,5 @@ pub fn draw<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
                 .as_ref(),
         )
         .split(area);
-
+    draw_log_widget(f, chunks[1]);
 }

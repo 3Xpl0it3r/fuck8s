@@ -86,6 +86,10 @@ impl Manager {
         Ok(())
     }
 
+    pub async fn check_connection(&self) {
+        self.kube_client.apiserver_version().await.expect("Check Kubernetes Conenction failed");
+    }
+
 
 }
 
